@@ -75,11 +75,26 @@ class LinearModel {
     b_ *= expansion_factor;
   }
 
+  // Never fuse a*key+b into one multiply-add: ALEX builds its models so that boundary
+  // keys land exactly on whole numbers with separate rounding (e.g. b = -a * boundary).
+  // A fused result can fall just below the boundary and pick the wrong child. See #40.
+#if defined(__GNUC__) && !defined(__clang__)
+  __attribute__((optimize("fp-contract=off")))
+#endif
   inline int predict(T key) const {
+#if defined(__clang__)
+#pragma clang fp contract(off)
+#endif
     return static_cast<int>(a_ * static_cast<double>(key) + b_);
   }
 
+#if defined(__GNUC__) && !defined(__clang__)
+  __attribute__((optimize("fp-contract=off")))
+#endif
   inline double predict_double(T key) const {
+#if defined(__clang__)
+#pragma clang fp contract(off)
+#endif
     return a_ * static_cast<double>(key) + b_;
   }
 };
